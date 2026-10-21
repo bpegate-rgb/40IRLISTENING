@@ -52,6 +52,9 @@
     .answer-part { margin-bottom: 7px; }
     .choice-error { color: #c41725; background: #ffe5e8; font-weight: bold; padding: 2px 4px; border-radius: 3px; }
     input:disabled, select:disabled { background: #f1f3f5; color: #687787; }
+    .result-pagination:not(.hidden) { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 18px; flex-wrap: wrap; }
+    .result-pagination button { width: auto; min-width: 100px; }
+    .result-page-info { font-size: 14px; color: #334155; text-align: center; }
   </style>
 </head>
 <body oncontextmenu="return false;">
@@ -132,11 +135,17 @@
     </div>
 
     <div id="error-container"></div>
+    <nav id="result-pagination" class="result-pagination hidden" aria-label="結果頁面切換" data-html2canvas-ignore="true">
+      <button id="result-prev-btn" type="button" onclick="changeResultPage(-1)">← 上一頁</button>
+      <span id="result-page-info" class="result-page-info" aria-live="polite"></span>
+      <button id="result-next-btn" type="button" onclick="changeResultPage(1)">下一頁 →</button>
+    </nav>
 
     <div data-html2canvas-ignore="true" style="margin-top: 20px;">
-      <div id="snapshot-status" class="status-msg" role="status" aria-live="polite">測驗完成後會自動截圖，並寄到 bpegate@gmail.com。</div>
+      <div id="snapshot-status" class="status-msg" role="status" aria-live="polite">測驗完成後會自動製作兩頁截圖，並在同一封郵件中寄到 bpegate@gmail.com。</div>
       <button id="snapshot-retry-btn" class="hidden" type="button" onclick="emailResultSnapshot()" style="margin-top: 10px;">重新寄送結果截圖</button>
-      <a id="snapshot-download" class="hidden">下載結果截圖</a>
+      <a id="snapshot-download" class="hidden">下載截圖第 1 頁</a>
+      <a id="snapshot-download-2" class="hidden" style="margin-left:16px;">下載截圖第 2 頁</a>
     </div>
 
     <br>
@@ -144,7 +153,7 @@
   </div>
 
  <script>
-    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzzTVSP1l6rISnLvicnW_0QhObDLbXVh_Sa2fQuJI92akhBqL0odq3r_PDOoWPPQ2Y5Hw/exec";
+    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzcpw_VxvXtMKoxjL0Q5ydlnE_p36T_nQ9QH1Dbm1nFlqSfGFzUqB7VqcB2UZqIkjFF8w/exec";
 
     const questions = [
       { id: 1, cn: "出發地不是香港", en: "Origin Not HKG" },
@@ -201,7 +210,7 @@
     const TIME_LIMIT_SECONDS = 20 * 60; // 20 分鐘
     let timeSpentFormatted = "";
     let screenshotLibraryPromise = null;
-    let snapshotDataUrl = '';
+    let snapshotPages = [];
     let snapshotInProgress = false;
     let snapshotSent = false;
     let snapshotRequestId = '';
@@ -212,6 +221,8 @@
     let chineseChoices = [];
 
     let availableEnglishVoices = [];
+    const RESULT_PAGE_SIZE = 20;
+    let currentResultPage = 0;
 
     const answerInput = document.getElementById('answer-input');
 
@@ -623,7 +634,7 @@
       };
     }
 
-    function renderAnswerReview(answers, quizQuestions = []) {
+    function renderAnswerReview(answers, quizQuestions = [], options = {}) {
       const complete = completeQuizAnswers(answers, quizQuestions);
       const reviewed = complete.map(item => ({
         ...item, difference: item.isUnanswered ? null : answerDifference(item.user, item.target)
@@ -632,6 +643,11 @@
       const wrong = reviewed.filter(item => !item.isUnanswered && !item.isCorrect);
       const tolerated = reviewed.filter(item => item.isCorrect && item.difference.count > 0);
       const exact = reviewed.filter(item => item.isCorrect && item.difference.count === 0);
+      const totalPages = Math.max(1, Math.ceil(reviewed.length / RESULT_PAGE_SIZE));
+      const paginated = options.page !== undefined;
+      const page = Math.max(0, Math.min(totalPages - 1, Math.floor(Number(options.page) || 0)));
+      const start = paginated ? page * RESULT_PAGE_SIZE : 0;
+      const visible = paginated ? reviewed.slice(start, start + RESULT_PAGE_SIZE) : reviewed;
       let html = reviewed.length > 0 && wrong.length === 0 && unanswered.length === 0
         ? `<div class="all-correct">已作答的 ${answers.length} 題均判定答對${tolerated.length ? `（其中 ${tolerated.length} 題獲容錯判對）` : ''}。</div>`
         : '';
@@ -641,7 +657,7 @@
           <p class="review-note">紅色字母表示換錯或多寫的字母；<span class="letter-error missing-letter">[漏：字母]</span> 表示漏寫。標準答案的相應字母亦會標紅。答錯題以黃色整行高亮；容錯答對仍獲 1 分。未作答題以灰色標示並列出正確答案，不計分。</p>
           <div class="review-scroll"><table class="score-table">
             <thead><tr><th>英文女聲正確中文</th><th>答題者選擇的中文</th><th>英文作答</th><th>標準英文答案</th><th>判定</th></tr></thead><tbody>`;
-        reviewed.forEach(item => {
+        visible.forEach(item => {
           const rowClass = item.isUnanswered ? 'unanswered-row' : !item.isCorrect ? 'wrong-row' : item.difference.count > 0 ? 'tolerated-row' : 'correct-row';
           const badgeClass = item.isUnanswered ? 'unanswered-badge' : item.isCorrect ? 'tolerated-badge' : 'wrong-badge';
           const status = item.isUnanswered ? '未作答' : !item.isCorrect ? '答錯' : item.difference.count > 0 ? '容錯答對' : '完全答對';
@@ -659,10 +675,29 @@
       }
       return {
         html,
+        page, totalPages, start: reviewed.length ? start + 1 : 0, end: start + visible.length, total: reviewed.length,
         errorSummaryString: wrong.length === 0 && unanswered.length === 0 ? '無錯處 (全對)' : reviewed.filter(item => !item.isCorrect).map(item =>
           item.isUnanswered ? `[${item.cn} | 未作答 | 正確: ${item.target}] ` : `[${item.cn} | ${item.selectedChinese === undefined ? '' : '中文選擇: ' + item.selectedChinese + ' | '}填寫: ${item.user} | 正確: ${item.target}] `
         ).join('')
       };
+    }
+
+    function showResultPage(page) {
+      const review = renderAnswerReview(userAnswers, activeQuestions, { page });
+      currentResultPage = review.page;
+      document.getElementById('error-container').innerHTML = review.html;
+      document.getElementById('result-prev-btn').disabled = review.page === 0;
+      document.getElementById('result-next-btn').disabled = review.page >= review.totalPages - 1;
+      document.getElementById('result-page-info').textContent = `第 ${review.page + 1} / ${review.totalPages} 頁｜第 ${review.start}–${review.end} 題`;
+      const navigation = document.getElementById('result-pagination');
+      if (review.totalPages > 1) navigation.classList.remove('hidden');
+      else navigation.classList.add('hidden');
+      return review;
+    }
+
+    function changeResultPage(direction) {
+      showResultPage(currentResultPage + direction);
+      document.getElementById('result-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
     function submitAnswer() {
@@ -722,9 +757,7 @@
       document.getElementById('final-score').textContent = score;
       document.getElementById('time-spent-text').textContent = `⏱️ 測驗耗時：${timeSpentFormatted}`;
 
-      const errorContainer = document.getElementById('error-container');
-      const review = renderAnswerReview(userAnswers, activeQuestions);
-      errorContainer.innerHTML = review.html;
+      const review = showResultPage(0);
       sendResultToGoogleDrive(review.errorSummaryString);
       emailResultSnapshot();
     }
@@ -758,13 +791,16 @@
       return screenshotLibraryPromise;
     }
 
-    async function captureResultSnapshot() {
+    async function captureResultSnapshot(page = 0) {
       const html2canvas = await loadScreenshotLibrary();
       if (document.fonts && document.fonts.ready) await document.fonts.ready;
       const snapshot = document.getElementById('result-card').cloneNode(true);
       snapshot.id = 'result-snapshot';
       snapshot.classList.remove('hidden');
       snapshot.style.cssText = 'position:absolute;left:-10000px;top:0;width:1100px;max-width:none;box-sizing:border-box;box-shadow:none;background:#fff;';
+      // 每頁截圖只包含該頁 20 題；只更新複本，不改動使用者正在查看的頁面。
+      const review = renderAnswerReview(userAnswers, activeQuestions, { page });
+      snapshot.querySelector('#error-container').innerHTML = `<div class="prompt">截圖第 ${review.page + 1} / ${review.totalPages} 頁｜第 ${review.start}–${review.end} 題</div>` + review.html;
       snapshot.querySelectorAll('[data-html2canvas-ignore], #upload-status').forEach(element => element.remove());
       snapshot.querySelectorAll('.review-scroll').forEach(element => { element.style.overflow = 'visible'; });
       document.body.appendChild(snapshot);
@@ -778,16 +814,27 @@
       }
     }
 
-    function postSnapshotForEmail(dataUrl) {
+    async function captureResultSnapshots() {
+      const total = completeQuizAnswers(userAnswers, activeQuestions).length;
+      const totalPages = Math.max(1, Math.ceil(total / RESULT_PAGE_SIZE));
+      const pages = [];
+      for (let page = 0; page < totalPages; page++) {
+        pages.push(await captureResultSnapshot(page));
+      }
+      return pages;
+    }
+
+    function postSnapshotForEmail(dataUrls) {
       if (!snapshotRequestId) snapshotRequestId = crypto.randomUUID();
+      const pages = Array.isArray(dataUrls) ? dataUrls : [dataUrls];
       const fields = {
         action: 'emailResultSnapshot', requestId: snapshotRequestId,
         timestamp: new Date().toLocaleString('zh-TW', { timeZone: 'Asia/Hong_Kong' }),
         employeeId: userData.empId, team: userData.team,
         score: String(score), timeSpent: timeSpentFormatted,
-        imageBase64: dataUrl.split(',')[1]
+        imageBase64Pages: JSON.stringify(pages.map(dataUrl => dataUrl.split(',')[1]))
       };
-      return postCloudForm(fields, 'egate-snapshot-result', '未收到寄信確認（目前無法確認是否已寄出）。請先查看 bpegate@gmail.com 及垃圾郵件；如未收到，請確認 Apps Script 有 doPost、已完成寄信授權，並更新原有部署的新版本。');
+      return postCloudForm(fields, 'egate-snapshot-result', '未收到寄信確認（目前無法確認是否已寄出）。請先查看 bpegate@gmail.com 及垃圾郵件；如未收到，請確認 Apps Script 已更新為支援分頁截圖的版本、完成寄信授權，並更新原有部署的新版本。');
     }
 
     function postCloudForm(fields, replyType, timeoutMessage) {
@@ -846,20 +893,24 @@
       retry.classList.add('hidden');
       restart.disabled = true;
       status.style.color = '#555';
-      status.textContent = '正在製作完整結果截圖，請勿關閉頁面…';
+      status.textContent = '正在製作分頁結果截圖，請勿關閉頁面…';
       let stage = '製作截圖';
       try {
-        if (!snapshotDataUrl) snapshotDataUrl = await captureResultSnapshot();
-        const download = document.getElementById('snapshot-download');
-        download.href = snapshotDataUrl;
-        download.download = 'Egate-Result-' + userData.empId.replace(/[^a-zA-Z0-9_-]/g, '_') + '.png';
-        download.classList.remove('hidden');
+        if (!snapshotPages.length) snapshotPages = await captureResultSnapshots();
+        ['snapshot-download', 'snapshot-download-2'].forEach((id, index) => {
+          const download = document.getElementById(id);
+          if (snapshotPages[index]) {
+            download.href = snapshotPages[index];
+            download.download = 'Egate-Result-' + userData.empId.replace(/[^a-zA-Z0-9_-]/g, '_') + '-page-' + (index + 1) + '-of-' + snapshotPages.length + '.png';
+            download.classList.remove('hidden');
+          } else download.classList.add('hidden');
+        });
         stage = '寄送截圖';
-        status.textContent = '正在寄送截圖到 bpegate@gmail.com，請勿關閉頁面…';
-        await postSnapshotForEmail(snapshotDataUrl);
+        status.textContent = `正在把 ${snapshotPages.length} 張截圖放入同一封郵件，寄到 bpegate@gmail.com，請勿關閉頁面…`;
+        await postSnapshotForEmail(snapshotPages);
         snapshotSent = true;
         status.style.color = '#176b3a';
-        status.textContent = '✅ Apps Script 已確認寄出截圖至 bpegate@gmail.com。請在信箱查看附件（亦可檢查垃圾郵件）。';
+        status.textContent = `✅ Apps Script 已確認寄出 ${snapshotPages.length} 張分頁截圖至 bpegate@gmail.com（同一封郵件）。請在信箱查看附件（亦可檢查垃圾郵件）。`;
       } catch (error) {
         status.style.color = error.confirmationPending ? '#8a5700' : '#b42318';
         status.textContent = '⚠️ ' + (error.confirmationPending ? '' : stage + '未完成：') + error.message;

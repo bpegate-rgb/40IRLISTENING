@@ -614,9 +614,12 @@
 
     function buildChineseAnswerSummary(answers, quizQuestions = []) {
       const complete = completeQuizAnswers(answers, quizQuestions);
+      // F、G 只列已提交且判定答錯的題目；保留原題號，未作答仍由 H 欄記錄。
+      const wrong = complete.map((item, index) => ({ ...item, questionNumber: index + 1 }))
+        .filter(item => !item.isUnanswered && item.isCorrect === false);
       return {
-        correctChinese: complete.map((item, index) => `${index + 1}. ${item.cn}`).join('\n'),
-        selectedChinese: complete.map((item, index) => `${index + 1}. ${item.isUnanswered ? '未作答' : (item.selectedChinese || '未記錄')}`).join('\n')
+        correctChinese: wrong.length ? wrong.map(item => `${item.questionNumber}. ${item.cn}`).join('\n') : '無錯題',
+        selectedChinese: wrong.length ? wrong.map(item => `${item.questionNumber}. ${item.selectedChinese || '未記錄'}`).join('\n') : '無錯題'
       };
     }
 
@@ -883,12 +886,12 @@
         selectedChinese: summary.selectedChinese
       };
       uploadStatus.style.color = '#555';
-      uploadStatus.textContent = '正在儲存分數、耗時及全部題目的中文答案至 Google Sheets…';
-      // 完整中文答案以 POST 表單傳送，避免 40 題資料造成網址過長。
+      uploadStatus.textContent = '正在儲存分數、耗時及錯題的中文答案至 Google Sheets…';
+      // 錯題中文答案以 POST 表單傳送，F、G 欄保留原題號方便對照。
       return postCloudForm(fields, 'egate-sheet-result', '未收到 Google Sheets 儲存確認。請確認已安裝支援 saveQuizResult 的 Apps Script 並部署新版本，再檢查試算表。')
         .then(() => {
           uploadStatus.style.color = "green";
-          uploadStatus.textContent = '✅ 已確認儲存至 Google Sheets，包含女聲正確中文及答題者選擇的中文。';
+          uploadStatus.textContent = '✅ 已確認儲存至 Google Sheets，F、G 欄只列錯題的中文答案。';
         })
         .catch(err => {
           uploadStatus.style.color = err.confirmationPending ? '#8a5700' : '#b42318';

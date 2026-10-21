@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Egate 40 IR Listening Quiz</title>
+  <style>
+    body { font-family: "Segoe UI", Arial, sans-serif; background-color: #f0f2f5; padding: 20px; display: flex; justify-content: center; }
+    .card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); width: 100%; max-width: 650px; }
+    .hidden { display: none; }
+    .form-group { margin-bottom: 20px; }
+    label { display: block; margin-bottom: 8px; font-weight: bold; color: #333; }
+    input[type="text"], select { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 16px; }
+    button { background-color: #0066cc; color: white; border: none; padding: 12px 20px; border-radius: 6px; cursor: pointer; width: 100%; font-size: 16px; font-weight: bold; transition: background 0.2s; }
+    button:hover { background-color: #004b99; }
+    button:disabled { background-color: #cccccc; cursor: not-allowed; }
+    .prompt { font-size: 22px; font-weight: bold; color: #1a2b4c; margin-bottom: 15px; padding: 12px; background: #eef4ff; border-left: 5px solid #0066cc; border-radius: 4px; }
+    .warning { color: #d9534f; font-size: 13px; margin-top: 6px; display: none; font-weight: bold; }
+    .progress { font-size: 14px; color: #666; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+    .timer-badge { background: #fff3cd; color: #856404; padding: 4px 8px; border-radius: 4px; font-weight: bold; border: 1px solid #ffeeba; }
+    .timer-danger { background: #f8d7da; color: #721c24; border-color: #f5c6cb; animation: pulse 1s infinite; }
+    @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+    .summary-box { background: #f8f9fa; border: 1px solid #e9ecef; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+    .score-badge { font-size: 24px; font-weight: bold; color: #0066cc; }
+    .error-section-title { font-size: 18px; font-weight: bold; color: #d9534f; margin-top: 20px; margin-bottom: 10px; border-bottom: 2px solid #d9534f; padding-bottom: 5px; }
+    .score-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    #result-card { max-width: 1000px; }
+    #result-card .score-table { min-width: 850px; }
+    .score-table th, .score-table td { border: 1px solid #ddd; padding: 10px; text-align: left; font-size: 14px; }
+    .score-table th { background-color: #f2f2f2; }
+    .wrong-row { background-color: #fff0a6; }
+    .wrong-row td { border-color: #e0b84b; }
+    .wrong-row td:first-child { border-left: 5px solid #e39a00; }
+    .answer-text { color: #243246; line-height: 1.7; overflow-wrap: anywhere; }
+    .letter-error { color: #c41725; font-weight: 800; text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 3px; }
+    .missing-letter { background: #ffe5e8; border-radius: 3px; padding: 0 3px; font-size: 13px; }
+    .review-scroll { overflow-x: auto; }
+    .review-status { min-width: 80px; }
+    .result-badge { display: inline-block; padding: 3px 7px; border-radius: 4px; font-weight: bold; white-space: nowrap; }
+    .tolerated-badge { color: #176b3a; background: #e6f4ea; }
+    .wrong-badge { color: #8a3100; background: #ffdb69; }
+    .unanswered-row { background-color: #edf2f7; }
+    .unanswered-badge { color: #475569; background: #dce4ed; }
+    .review-note { font-size: 13px; color: #555; line-height: 1.7; margin: 6px 0 12px; }
+    .difference-note { margin-top: 8px; font-size: 13px; color: #7f1d1d; font-weight: normal; line-height: 1.6; }
+    .difference-note ul { margin: 3px 0 0; padding-left: 18px; }
+    .correct-ans { color: #28a745; font-weight: bold; }
+    .all-correct { background-color: #e6f4ea; color: #137333; padding: 15px; border-radius: 6px; font-weight: bold; text-align: center; margin-top: 15px; }
+    .status-msg { font-size: 13px; color: #666; margin-top: 5px; }
+    .listening-panel { margin-bottom: 20px; padding: 18px; background: #eef4ff; border: 1px solid #c9dcf5; border-radius: 8px; }
+    .play-button { background: #173f75; margin: 8px 0; }
+    .answer-part { margin-bottom: 7px; }
+    .choice-error { color: #c41725; background: #ffe5e8; font-weight: bold; padding: 2px 4px; border-radius: 3px; }
+    input:disabled, select:disabled { background: #f1f3f5; color: #687787; }
+  </style>
+</head>
+<body oncontextmenu="return false;">
+
+  <!-- 階段 1：員工資料登記 -->
+  <div id="login-card" class="card">
+    <h2>Egate 40 IR 女聲聽力測驗</h2>
+    <p style="color: #666; font-size: 14px; line-height: 1.7;">共 40 題，限時 20 分鐘。按鈕播放英文合成女聲 → 選擇中文意思 → 輸入聽到的英文。兩部分都答對，每題得 1 分。語音可重播，結果將同步至雲端記錄。</p>
+    <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+    
+    <div class="form-group">
+      <label for="emp-id">UI </label>
+      <input type="text" id="emp-id" placeholder="例如：EMP12345">
+    </div>
+    <div class="form-group">
+      <label for="team-id">Team </label>
+      <select id="team-id">
+        <option value="">-- 請選擇 Team --</option>
+        <option value="T1-Team1">T1-Team1</option>
+        <option value="T1-Team2">T1-Team2</option>
+        <option value="T1-Team3">T1-Team3</option>
+        <option value="T1-Team4">T1-Team4</option>
+        <option value="T1-Team5">T1-Team5</option>
+        <option value="T1-Team6">T1-Team6</option>
+        <option value="T2-Team1">T2-Team1</option>
+        <option value="T2-Team2">T2-Team2</option>
+        <option value="T2-Team3">T2-Team3</option>
+        <option value="T2-Team4">T2-Team4</option>
+        <option value="T2-Team5">T2-Team5</option>
+        <option value="T2-Team6">T2-Team6</option>
+      </select>
+    </div>
+    <button onclick="startGame()">開始測驗</button>
+  </div>
+
+  <!-- 階段 2：拼字遊戲畫面 -->
+  <div id="game-card" class="card hidden">
+    <div class="progress">
+      <span id="progress-text">進度：1 / 40 題</span>
+      <span id="timer-display" class="timer-badge">⏳ 剩餘時間：20:00</span>
+    </div>
+    
+    <div style="font-size: 14px; color: #666; margin-bottom: 10px;" id="current-score-text">當前分數：0 分</div>
+    <div class="listening-panel">
+      <div class="prompt" id="listening-prompt">步驟 1：按鈕播放英文合成女聲</div>
+      <label for="voice-select">英文女聲：</label>
+      <select id="voice-select" aria-describedby="voice-status"><option value="">正在載入聲線…</option></select>
+      <div id="voice-status" class="status-msg">優先選用裝置提供的英文女聲。</div>
+      <button id="play-question-btn" class="play-button" type="button" onclick="playQuestionAudio()">▶ 步驟 1：播放英文女聲</button>
+      <div id="audio-status" class="status-msg" role="status" aria-live="polite">按播放按鈕聆聽題目，可重複播放。</div>
+    </div>
+    <div class="form-group">
+      <label for="chinese-answer">步驟 2：根據女聲選擇中文答案：</label>
+      <select id="chinese-answer" onchange="handleChineseSelection()" disabled>
+        <option value="">-- 請先播放並聽完題目 --</option>
+      </select>
+    </div>
+    
+    <div class="form-group">
+      <label for="answer-input">步驟 3：輸入聽到的英文 IR（禁止貼上）：</label>
+      <input type="text" id="answer-input" autocomplete="off" spellcheck="false" autocapitalize="off" autocorrect="off" disabled placeholder="先聽語音及選擇中文，再輸入英文" onkeydown="handleKeyPress(event)">
+      <div class="status-msg">按標準答案的英文字母數計算：10 個或以下容許錯 1 個，多於 10 個容許錯 2 個（包括漏字母、多字母及換錯字母）。數字須正確。</div>
+      <div id="paste-warning" class="warning">⚠️ 為確保公平，本測驗已禁用貼上 (Paste) 功能！請手動輸入。</div>
+    </div>
+    
+    <button id="submit-answer-btn" onclick="submitAnswer()" disabled>下一題 / 提交</button>
+  </div>
+
+  <!-- 階段 3：結果與錯處展示 -->
+  <div id="result-card" class="card hidden">
+    <h2>測驗結果</h2>
+    
+    <div class="summary-box">
+      <p id="result-user-info" style="margin: 0 0 10px 0;"></p>
+      <div>總分：<span id="final-score" class="score-badge">0</span> / 40 分</div>
+      <div id="time-spent-text" style="margin-top: 5px; font-weight: bold; color: #555;"></div>
+      <div id="upload-status" class="status-msg">正在上傳結果至雲端...</div>
+    </div>
+
+    <div id="error-container"></div>
+
+    <div data-html2canvas-ignore="true" style="margin-top: 20px;">
+      <div id="snapshot-status" class="status-msg" role="status" aria-live="polite">測驗完成後會自動截圖，並寄到 bpegate@gmail.com。</div>
+      <button id="snapshot-retry-btn" class="hidden" type="button" onclick="emailResultSnapshot()" style="margin-top: 10px;">重新寄送結果截圖</button>
+      <a id="snapshot-download" class="hidden">下載結果截圖</a>
+    </div>
+
+    <br>
+    <button id="restart-btn" data-html2canvas-ignore="true" onclick="location.reload()">重新開始測驗</button>
+  </div>
+
+ <script>
+    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxH5AYu5x7mvtFq6BYk0OcOIpx5B9MORdgA4Rg-z2KSCf4GWFXyb94Q5LN6AkWHtb5zhw/exec";
+
+    const questions = [
+      { id: 1, cn: "出發地不是香港", en: "Origin Not HKG" },
+      { id: 2, cn: "沒有航班", en: "Flight Not Exist" },
+      { id: 3, cn: "樣貌不符 - 相片低像素", en: "Face NOT Matched (Low quality)" },
+      { id: 4, cn: "偵察發現嬰孩", en: "Baby Detected" },
+      { id: 5, cn: "姓名不符", en: "Name Not Match" },
+      { id: 6, cn: "航班已起飛", en: "Flight Departed" },
+      { id: 7, cn: "樣貌不符", en: "Face Not Match" },
+      { id: 8, cn: "尾隨進入", en: "Tail-Gating" },
+      { id: 9, cn: "非法爬入", en: "Intrusion" },
+      { id: 10, cn: "閘內非法爬出", en: "Evasion" },
+      { id: 11, cn: "找不到樣貌", en: "Face Not Found" },
+      { id: 12, cn: "隊長確認", en: "Face Verification Escalation" },
+      { id: 13, cn: "無效登機證", en: "Barcode NOT valid" },
+      { id: 14, cn: "航班已取消", en: "Flight Canceled" },
+      { id: 15, cn: "樣貌活躍度檢測失效", en: "Face Liveness Fail" },
+      { id: 16, cn: "樣貌活躍度檢測失效 - 相片低像素", en: "Face Liveness FAIL (Low quality)" },
+      { id: 17, cn: "電子相片無效", en: "Face Feature NOT Found" },
+      { id: 18, cn: "旅遊證件過期", en: "Travel Document Expired" },
+      { id: 19, cn: "早於起飛時間24小時", en: "Flight Depart >24" },
+      { id: 20, cn: "航空公司要求檢查", en: "Airline Exception" },
+      { id: 21, cn: "重複進入", en: "Duplicated Entry" },
+      { id: 22, cn: "相片低像素", en: "Face Matched - Low Quality" },
+      { id: 23, cn: "超過指定時間", en: "Exit Time Out" },
+      { id: 24, cn: "掃描登機證超過指定時間", en: "Boarding Pass Scan Timeout" },
+      { id: 25, cn: "CX需要聯絡乘客", en: "DCS check failed" },
+      { id: 26, cn: "登機證資料不在系統內", en: "PAX not on DCS List" },
+      { id: 27, cn: "辦理登機手續序列已變更", en: "DCS check-in sequence changed" },
+      { id: 28, cn: "超過指定時間進入", en: "Entry Timeout" },
+      { id: 29, cn: "求助按鈕", en: "Help Alert" },
+      { id: 30, cn: "不間斷電源系統正在供電", en: "UPS Discharge" },
+      { id: 31, cn: "不間斷電源系統回復待命狀態", en: "UPS Resume" },
+      { id: 32, cn: "非電子旅行證件", en: "Non-e Travel Document" },
+      { id: 33, cn: "機器故障", en: "Device Error" },
+      { id: 34, cn: "名字缺失且與姓氏錯位", en: "Family/ Given name swapping for short name combination" },
+      { id: 35, cn: "名字缺一", en: "Part of Given name is missing" },
+      { id: 36, cn: "無姓氏", en: "Substitute Family name by NLN" },
+      { id: 37, cn: "無名字", en: "Substitute Given name by NFN" },
+      { id: 38, cn: "航班即將起飛 - 30mins 內起飛", en: "Flight Almost Depart" },
+      { id: 39, cn: "只接受傳統登機證", en: "Self-Print Or Mobile Boarding Pass" },
+      { id: 40, cn: "使用他人的登機證", en: "Using Another Person's Token" }
+    ];
+
+    let activeQuestions = [];
+    let currentStep = 0;
+    let score = 0;
+    let userAnswers = [];
+    let userData = {};
+
+    // 計時相關變數
+    let startTime = null;
+    let timerInterval = null;
+    const TIME_LIMIT_SECONDS = 20 * 60; // 20 分鐘
+    let timeSpentFormatted = "";
+    let screenshotLibraryPromise = null;
+    let snapshotDataUrl = '';
+    let snapshotInProgress = false;
+    let snapshotSent = false;
+    let snapshotRequestId = '';
+    let quizFinished = false;
+    let questionHeard = false;
+    let currentUtterance = null;
+    let audioGeneration = 0;
+    let chineseChoices = [];
+
+    let availableEnglishVoices = [];
+
+    const answerInput = document.getElementById('answer-input');
+
+    answerInput.addEventListener('paste', function(e) {
+      e.preventDefault();
+      document.getElementById('paste-warning').style.display = 'block';
+    });
+
+    answerInput.addEventListener('drop', function(e) { e.preventDefault(); });
+    answerInput.addEventListener('input', function() {
+      document.getElementById('paste-warning').style.display = 'none';
+    });
+
+    function handleKeyPress(e) {
+      if (e.key === 'Enter') submitAnswer();
+    }
+
+    function startGame() {
+      try {
+        const empId = document.getElementById('emp-id').value.trim();
+        const team = document.getElementById('team-id').value;
+
+        if (!empId || !team) {
+          alert("請填寫UI並選擇 Team！");
+          return;
+        }
+
+        userData = { empId, team };
+
+        // 中文選項與題目各自打亂，避免選項順序透露題目順序。
+        chineseChoices = [...questions].map(question => question.cn);
+        for (let i = chineseChoices.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [chineseChoices[i], chineseChoices[j]] = [chineseChoices[j], chineseChoices[i]];
+        }
+        populateChineseChoices();
+
+        // 使用 Fisher-Yates 隨機打亂題目順序
+        activeQuestions = [...questions];
+        for (let i = activeQuestions.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [activeQuestions[i], activeQuestions[j]] = [activeQuestions[j], activeQuestions[i]];
+        }
+
+        document.getElementById('login-card').classList.add('hidden');
+        document.getElementById('game-card').classList.remove('hidden');
+        
+        // 記錄開始時間並啟動計時器
+        startTime = new Date();
+        startTimer();
+
+        showQuestion();
+      } catch (err) {
+        alert("發生錯誤：" + err.message);
+      }
+    }
+
+    function startTimer() {
+      const timerDisplay = document.getElementById('timer-display');
+      
+      timerInterval = setInterval(() => {
+        const now = new Date();
+        const elapsedSeconds = Math.floor((now - startTime) / 1000);
+        const remainingSeconds = TIME_LIMIT_SECONDS - elapsedSeconds;
+
+        if (remainingSeconds <= 0) {
+          clearInterval(timerInterval);
+          timerDisplay.textContent = "⏳ 時間到！";
+          alert("20分鐘時間已到，測驗將自動提交！");
+          finishGame();
+          return;
+        }
+
+        const mins = Math.floor(remainingSeconds / 60);
+        const secs = remainingSeconds % 60;
+        timerDisplay.textContent = `⏳ 剩餘時間：${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+
+        // 最後 1 分鐘呈現紅色警示
+        if (remainingSeconds <= 60) {
+          timerDisplay.classList.add('timer-danger');
+        }
+      }, 1000);
+    }
+
+    function showQuestion() {
+      if (currentStep < activeQuestions.length) {
+        stopQuestionAudio();
+        questionHeard = false;
+        document.getElementById('progress-text').textContent = `進度：${currentStep + 1} / ${activeQuestions.length} 題`;
+        document.getElementById('current-score-text').textContent = `當前分數：${score} 分`;
+        document.getElementById('listening-prompt').textContent = `第 ${currentStep + 1} 題：請聆聽英文女聲`;
+        document.getElementById('audio-status').textContent = '按播放按鈕聆聽題目，可重複播放。';
+        document.getElementById('play-question-btn').textContent = '▶ 步驟 1：播放英文女聲';
+        document.getElementById('play-question-btn').disabled = false;
+        const chineseSelect = document.getElementById('chinese-answer');
+        chineseSelect.value = '';
+        chineseSelect.disabled = true;
+        if (chineseSelect.options.length) chineseSelect.options[0].textContent = '-- 請先播放並聽完女聲題目 --';
+        document.getElementById('submit-answer-btn').disabled = true;
+        answerInput.value = '';
+        answerInput.disabled = true;
+        answerInput.placeholder = '先聽語音及選擇中文，再輸入英文';
+        document.getElementById('play-question-btn').focus();
+      } else {
+        finishGame();
+      }
+    }
+
+    function populateChineseChoices() {
+      const select = document.getElementById('chinese-answer');
+      select.replaceChildren();
+      const placeholder = document.createElement('option');
+      placeholder.value = '';
+      placeholder.textContent = '-- 請先播放並聽完女聲題目 --';
+      select.appendChild(placeholder);
+      chineseChoices.forEach(chinese => {
+        const option = document.createElement('option');
+        option.value = chinese;
+        option.textContent = chinese;
+        select.appendChild(option);
+      });
+    }
+
+    function stopQuestionAudio() {
+      audioGeneration++;
+      if (typeof speechSynthesis !== 'undefined') speechSynthesis.cancel();
+      currentUtterance = null;
+    }
+
+    function populateSpeechVoices() {
+      const select = document.getElementById('voice-select');
+      const status = document.getElementById('voice-status');
+      if (typeof speechSynthesis === 'undefined' || typeof SpeechSynthesisUtterance === 'undefined') {
+        status.textContent = '此瀏覽器未提供語音播放，請使用支援語音合成的瀏覽器。';
+        return;
+      }
+      const femaleName = /\b(zira|aria|jenny|sonia|samantha|hazel|susan|salli|joanna|amy|emma|olivia|ava|serena|karen|moira|tessa|victoria|allison|shelley|sandy|female)\b/i;
+      availableEnglishVoices = speechSynthesis.getVoices().filter(voice => /^en(?:[-_]|$)/i.test(voice.lang));
+      availableEnglishVoices.sort((left, right) => {
+        const rank = voice => (femaleName.test(voice.name) ? 0 : 10) + (/natural|neural/i.test(voice.name) ? 0 : 1);
+        return rank(left) - rank(right) || left.name.localeCompare(right.name);
+      });
+      select.replaceChildren();
+      const placeholder = document.createElement('option');
+      placeholder.value = '';
+      placeholder.textContent = availableEnglishVoices.length ? '-- 請選擇英文女聲 --' : '-- 等待英文聲線載入 --';
+      select.appendChild(placeholder);
+      availableEnglishVoices.forEach((voice, index) => {
+        const option = document.createElement('option');
+        option.value = String(index);
+        option.textContent = voice.name + ' (' + voice.lang + ')' + (femaleName.test(voice.name) ? ' · 女聲優先' : ' · 請試聽確認聲線');
+        select.appendChild(option);
+      });
+      // 以 voiceURI 保留使用者選擇；沒有可辨識的女聲時，由使用者選擇，不會靜默切換男聲。
+      const selectedUri = select.dataset.selectedVoice || '';
+      let index = availableEnglishVoices.findIndex(voice => voice.voiceURI === selectedUri);
+      if (index < 0) index = availableEnglishVoices.findIndex(voice => femaleName.test(voice.name));
+      select.value = index >= 0 ? String(index) : '';
+      if (index >= 0) select.dataset.selectedVoice = availableEnglishVoices[index].voiceURI;
+      status.textContent = index >= 0 ? '可按播放聆聽；如需更換聲線，可在此選擇。' : availableEnglishVoices.length ? '未能自動辨識女聲，請選擇聲線並試聽確認。' : '尚未載入英文聲線，請稍候再按播放；亦可檢查裝置是否已安裝英文語音。';
+    }
+
+    function playQuestionAudio() {
+      if (quizFinished || !activeQuestions[currentStep]) return;
+      stopQuestionAudio();
+      const generation = audioGeneration;
+      const question = activeQuestions[currentStep];
+      const status = document.getElementById('audio-status');
+      populateSpeechVoices();
+      if (typeof speechSynthesis === 'undefined' || typeof SpeechSynthesisUtterance === 'undefined') {
+        status.textContent = '此瀏覽器未提供語音播放，請更換支援語音合成的瀏覽器。';
+        return;
+      }
+      const selected = document.getElementById('voice-select');
+      const voice = selected.value === '' ? null : availableEnglishVoices[Number(selected.value)];
+      if (!voice) {
+        status.textContent = '請待聲線載入，再從上方選擇英文女聲後播放。';
+        return;
+      }
+      const player = new SpeechSynthesisUtterance(question.en.replace(/[()/>-]/g, ' ').replace(/\s+/g, ' ').trim());
+      currentUtterance = player;
+      player.voice = voice;
+      player.lang = voice.lang;
+      player.rate = 0.85;
+      player.pitch = 1;
+      const fail = event => {
+        if (generation !== audioGeneration || quizFinished) return;
+        status.textContent = '語音未能播放，請檢查音量或更換上方聲線後重試。' + (event && event.error ? '（' + event.error + '）' : '');
+        document.getElementById('play-question-btn').textContent = '▶ 重新播放英文女聲';
+      };
+      player.onstart = () => {
+        if (generation !== audioGeneration || quizFinished) return;
+        status.textContent = '正在播放英文題目…';
+        document.getElementById('play-question-btn').textContent = '↻ 從頭重播';
+      };
+      player.onend = () => {
+        if (generation !== audioGeneration || quizFinished) return;
+        questionHeard = true;
+        const chineseSelect = document.getElementById('chinese-answer');
+        chineseSelect.disabled = false;
+        if (chineseSelect.options.length) chineseSelect.options[0].textContent = '-- 請選擇中文意思 --';
+        status.textContent = '播放完畢。請選擇中文意思，再輸入英文；也可按鈕重播。';
+        document.getElementById('play-question-btn').textContent = '↻ 重播英文女聲';
+      };
+      player.onerror = fail;
+      try {
+        speechSynthesis.speak(player);
+      } catch (_) { fail(); }
+    }
+
+    function handleChineseSelection() {
+      const ready = questionHeard && !!document.getElementById('chinese-answer').value && !quizFinished;
+      answerInput.disabled = !ready;
+      document.getElementById('submit-answer-btn').disabled = !ready;
+      answerInput.placeholder = ready ? '不分大小寫，忽略空格及標點符號' : '先聽語音及選擇中文，再輸入英文';
+      if (ready) {
+        document.getElementById('audio-status').textContent = '已選擇中文答案。步驟 3：請輸入聽到的英文，再提交本題。';
+        answerInput.focus();
+      }
+    }
+
+    function gradeListeningAnswer(question, selectedChinese, englishAnswer) {
+      const chineseCorrect = selectedChinese === question.cn;
+      const englishCorrect = isAnswerCorrect(englishAnswer, question.en);
+      return { chineseCorrect, englishCorrect, isCorrect: chineseCorrect && englishCorrect };
+    }
+
+    // 只比較英文字母及數字：忽略大小寫、所有空白與標點符號。
+    function normalizeAnswer(value) {
+      return value.toLowerCase().replace(/[^a-z0-9]/g, "");
+    }
+
+    // Levenshtein 距離：每次新增、刪除或替換一個字元計作一個錯誤。
+    function editDistance(input, target) {
+      let previous = Array.from({ length: target.length + 1 }, (_, index) => index);
+      for (let i = 1; i <= input.length; i++) {
+        const current = [i];
+        for (let j = 1; j <= target.length; j++) {
+          current[j] = Math.min(
+            previous[j] + 1,
+            current[j - 1] + 1,
+            previous[j - 1] + (input[i - 1] === target[j - 1] ? 0 : 1)
+          );
+        }
+        previous = current;
+      }
+      return previous[target.length];
+    }
+
+    function isAnswerCorrect(input, target) {
+      const cleanInput = normalizeAnswer(input);
+      const cleanTarget = normalizeAnswer(target);
+      const letterCount = cleanTarget.replace(/[^a-z]/g, "").length;
+      const allowedErrors = letterCount <= 10 ? 1 : 2;
+
+      // 容錯只適用於英文字母，數字仍須與標準答案相同。
+      if (!cleanInput || cleanInput.replace(/[^0-9]/g, "") !== cleanTarget.replace(/[^0-9]/g, "")) {
+        return false;
+      }
+      return editDistance(cleanInput, cleanTarget) <= allowedErrors;
+    }
+
+    // 將正規化後的比對位置對應回原始作答，保留原有大小寫、空格及標點。
+    function answerTokens(value) {
+      const chars = Array.from(value);
+      const tokens = [];
+      chars.forEach((char, position) => {
+        const normalized = char.toLowerCase();
+        if (/^[a-z0-9]$/.test(normalized)) tokens.push({ normalized, position });
+      });
+      return { chars, tokens };
+    }
+
+    function answerDifference(input, target) {
+      const source = answerTokens(input);
+      const standard = answerTokens(target);
+      const a = source.tokens;
+      const b = standard.tokens;
+      const distance = Array.from({ length: a.length + 1 }, () => Array(b.length + 1).fill(0));
+      // 從字串尾端計算剩餘距離，再由前向後對齊。
+      // 同樣的最小距離有多個解時，優先保留前面已寫對的字母，避免把 fail 的 l 誤對齊至 low。
+      for (let i = 0; i <= a.length; i++) distance[i][b.length] = a.length - i;
+      for (let j = 0; j <= b.length; j++) distance[a.length][j] = b.length - j;
+      for (let i = a.length - 1; i >= 0; i--) {
+        for (let j = b.length - 1; j >= 0; j--) {
+          distance[i][j] = Math.min(
+            distance[i + 1][j] + 1,
+            distance[i][j + 1] + 1,
+            distance[i + 1][j + 1] + (a[i].normalized === b[j].normalized ? 0 : 1)
+          );
+        }
+      }
+
+      const sourceErrors = new Set();
+      const targetErrors = new Set();
+      const missing = new Map();
+      const operations = [];
+      let i = 0;
+      let j = 0;
+      while (i < a.length || j < b.length) {
+        if (i < a.length && j < b.length && a[i].normalized === b[j].normalized && distance[i][j] === distance[i + 1][j + 1]) {
+          operations.push({ kind: 'match', input: i, target: j });
+          i++; j++;
+        } else if (i < a.length && j < b.length && distance[i][j] === distance[i + 1][j + 1] + 1) {
+          sourceErrors.add(a[i].position);
+          targetErrors.add(b[j].position);
+          operations.push({ kind: 'replace', input: i, target: j });
+          i++; j++;
+        } else if (i < a.length && distance[i][j] === distance[i + 1][j] + 1) {
+          sourceErrors.add(a[i].position);
+          operations.push({ kind: 'extra', input: i });
+          i++;
+        } else {
+          const position = i > 0 ? a[i - 1].position + 1 : (a.length ? a[0].position : 0);
+          const letter = standard.chars[b[j].position];
+          missing.set(position, (missing.get(position) || '') + letter);
+          targetErrors.add(b[j].position);
+          operations.push({ kind: 'missing', target: j });
+          j++;
+        }
+      }
+
+      // 用完整單字解釋替換；整段多寫／漏寫保留原有空格，便於辨別相似題目。
+      function excerpt(side, indices, wholeWords) {
+        if (indices.length === 0) return '';
+        let start = side.tokens[indices[0]].position;
+        let end = side.tokens[indices[indices.length - 1]].position + 1;
+        if (wholeWords) {
+          while (start > 0 && /^[a-z0-9]$/i.test(side.chars[start - 1])) start--;
+          while (end < side.chars.length && /^[a-z0-9]$/i.test(side.chars[end])) end++;
+        }
+        return side.chars.slice(start, end).join('');
+      }
+      const details = [];
+      let block = [];
+      function describeBlock() {
+        if (block.length === 0) return;
+        const inputIndices = block.filter(op => op.input !== undefined).map(op => op.input);
+        const targetIndices = block.filter(op => op.target !== undefined).map(op => op.target);
+        let description;
+        if (targetIndices.length === 0) description = `多寫「${excerpt(source, inputIndices, false)}」`;
+        else if (inputIndices.length === 0) description = `漏寫「${excerpt(standard, targetIndices, false)}」`;
+        else description = `「${excerpt(source, inputIndices, true)}」應為「${excerpt(standard, targetIndices, true)}」`;
+        if (!details.includes(description)) details.push(description);
+        block = [];
+      }
+      operations.forEach(op => {
+        if (op.kind === 'match') describeBlock();
+        else block.push(op);
+      });
+      describeBlock();
+
+      function render(chars, errors, omissions) {
+        // 將連續錯字與其中的空格合併成同一個紅色片段，讓多寫 low quality 一目了然。
+        const highlighted = new Set(errors);
+        const positions = [...errors].sort((left, right) => left - right);
+        for (let index = 1; index < positions.length; index++) {
+          const left = positions[index - 1];
+          const right = positions[index];
+          if (chars.slice(left + 1, right).every(char => /\s/.test(char))) {
+            for (let position = left + 1; position < right; position++) highlighted.add(position);
+          }
+        }
+        let html = '';
+        let run = '';
+        function flush() {
+          if (run) html += `<span class="letter-error">${run}</span>`;
+          run = '';
+        }
+        for (let position = 0; position <= chars.length; position++) {
+          if (omissions && omissions.has(position)) {
+            flush();
+            html += `<span class="letter-error missing-letter">[漏：${escapeHtml(omissions.get(position))}]</span>`;
+          }
+          if (position < chars.length) {
+            const char = escapeHtml(chars[position]);
+            if (highlighted.has(position)) run += char;
+            else { flush(); html += char; }
+          }
+        }
+        flush();
+        return html;
+      }
+      return {
+        count: distance[0][0],
+        userHtml: render(source.chars, sourceErrors, missing),
+        targetHtml: render(standard.chars, targetErrors),
+        detailsHtml: details.length ? `<div class="difference-note"><strong>差異說明：</strong><ul>${details.map(detail => `<li>${escapeHtml(detail)}</li>`).join('')}</ul></div>` : ''
+      };
+    }
+
+    function completeQuizAnswers(answers, quizQuestions = []) {
+      // 依測驗題目順序補齊尚未提交的題目，不改動已作答記錄或分數。
+      return quizQuestions.length > 0 ? quizQuestions.map((question, index) => answers[index] ? {
+        ...answers[index], cn: question.cn, target: question.en
+      } : {
+        cn: question.cn, target: question.en, user: '', selectedChinese: '', isCorrect: false, isUnanswered: true
+      }) : answers;
+    }
+
+    function buildChineseAnswerSummary(answers, quizQuestions = []) {
+      const complete = completeQuizAnswers(answers, quizQuestions);
+      return {
+        correctChinese: complete.map((item, index) => `${index + 1}. ${item.cn}`).join('\n'),
+        selectedChinese: complete.map((item, index) => `${index + 1}. ${item.isUnanswered ? '未作答' : (item.selectedChinese || '未記錄')}`).join('\n')
+      };
+    }
+
+    function renderAnswerReview(answers, quizQuestions = []) {
+      const complete = completeQuizAnswers(answers, quizQuestions);
+      const reviewed = complete.map(item => ({
+        ...item, difference: item.isUnanswered ? null : answerDifference(item.user, item.target)
+      }));
+      const unanswered = reviewed.filter(item => item.isUnanswered);
+      const wrong = reviewed.filter(item => !item.isUnanswered && !item.isCorrect);
+      const tolerated = reviewed.filter(item => item.isCorrect && item.difference.count > 0);
+      const exact = reviewed.filter(item => item.isCorrect && item.difference.count === 0);
+      let html = reviewed.length > 0 && wrong.length === 0 && unanswered.length === 0
+        ? `<div class="all-correct">已作答的 ${answers.length} 題均判定答對${tolerated.length ? `（其中 ${tolerated.length} 題獲容錯判對）` : ''}。</div>`
+        : '';
+      if (reviewed.length > 0) {
+        html += `<div class="error-section-title">全部 ${reviewed.length} 題答案</div>
+          <p class="review-note">完全答對 ${exact.length} 題・容錯答對 ${tolerated.length} 題・答錯 ${wrong.length} 題・未作答 ${unanswered.length} 題</p>
+          <p class="review-note">紅色字母表示換錯或多寫的字母；<span class="letter-error missing-letter">[漏：字母]</span> 表示漏寫。標準答案的相應字母亦會標紅。答錯題以黃色整行高亮；容錯答對仍獲 1 分。未作答題以灰色標示並列出正確答案，不計分。</p>
+          <div class="review-scroll"><table class="score-table">
+            <thead><tr><th>英文女聲正確中文</th><th>答題者選擇的中文</th><th>英文作答</th><th>標準英文答案</th><th>判定</th></tr></thead><tbody>`;
+        reviewed.forEach(item => {
+          const rowClass = item.isUnanswered ? 'unanswered-row' : !item.isCorrect ? 'wrong-row' : item.difference.count > 0 ? 'tolerated-row' : 'correct-row';
+          const badgeClass = item.isUnanswered ? 'unanswered-badge' : item.isCorrect ? 'tolerated-badge' : 'wrong-badge';
+          const status = item.isUnanswered ? '未作答' : !item.isCorrect ? '答錯' : item.difference.count > 0 ? '容錯答對' : '完全答對';
+          const chineseHtml = item.isUnanswered ? '未作答' : item.selectedChinese === undefined ? '未記錄' : `<span class="${item.chineseCorrect ? '' : 'choice-error'}">${escapeHtml(item.selectedChinese)}</span>`;
+          const partStatus = typeof item.chineseCorrect === 'boolean' ? `<div class="status-msg">中文：${item.chineseCorrect ? '答對' : '答錯'}<br>英文：${item.englishCorrect ? (item.difference.count ? '容錯答對' : '答對') : '答錯'}</div>` : '';
+          html += `<tr class="${rowClass}">
+            <td>${escapeHtml(item.cn)}</td>
+            <td class="answer-text">${chineseHtml}</td>
+            <td class="answer-text">${item.isUnanswered ? '未作答' : item.difference.userHtml + item.difference.detailsHtml}</td>
+            <td class="answer-text correct-ans">${item.isUnanswered ? escapeHtml(item.target) : item.difference.targetHtml}</td>
+            <td class="review-status"><span class="result-badge ${badgeClass}">${status}</span>${item.isUnanswered ? '' : partStatus + `<div class="status-msg">英文差異 ${item.difference.count} 個字元</div>`}</td>
+          </tr>`;
+        });
+        html += '</tbody></table></div>';
+      }
+      return {
+        html,
+        errorSummaryString: wrong.length === 0 && unanswered.length === 0 ? '無錯處 (全對)' : reviewed.filter(item => !item.isCorrect).map(item =>
+          item.isUnanswered ? `[${item.cn} | 未作答 | 正確: ${item.target}] ` : `[${item.cn} | ${item.selectedChinese === undefined ? '' : '中文選擇: ' + item.selectedChinese + ' | '}填寫: ${item.user} | 正確: ${item.target}] `
+        ).join('')
+      };
+    }
+
+    function submitAnswer() {
+      if (quizFinished || !activeQuestions[currentStep]) return;
+      if (!questionHeard) {
+        alert('請先按播放按鈕並聽完英文題目！');
+        return;
+      }
+      const selectedChinese = document.getElementById('chinese-answer').value;
+      if (!selectedChinese) {
+        alert('請先選擇中文答案！');
+        return;
+      }
+      const rawInput = answerInput.value.trim();
+      if (!rawInput) {
+        alert("請輸入英文IR答案！");
+        return;
+      }
+
+      const targetStr = activeQuestions[currentStep].en;
+      const grading = gradeListeningAnswer(activeQuestions[currentStep], selectedChinese, rawInput);
+
+      if (grading.isCorrect) score += 1;
+
+      userAnswers.push({
+        cn: activeQuestions[currentStep].cn,
+        target: targetStr.trim(),
+        user: rawInput,
+        selectedChinese: selectedChinese,
+        ...grading
+      });
+
+      currentStep++;
+      showQuestion();
+    }
+
+    function finishGame() {
+      if (quizFinished) return;
+      quizFinished = true;
+      stopQuestionAudio();
+      // 停止計時器
+      if (timerInterval) clearInterval(timerInterval);
+
+      // 計算實際花費時間
+      const endTime = new Date();
+      const totalSeconds = Math.floor((endTime - startTime) / 1000);
+      const finalMins = Math.floor(totalSeconds / 60);
+      const finalSecs = totalSeconds % 60;
+      timeSpentFormatted = `${finalMins}分${finalSecs}秒`;
+
+      document.getElementById('game-card').classList.add('hidden');
+      document.getElementById('result-card').classList.remove('hidden');
+
+      document.getElementById('result-user-info').innerHTML = `
+        <strong>UI：</strong> ${escapeHtml(userData.empId)} &nbsp;|&nbsp; <strong>Team：</strong> ${escapeHtml(userData.team)}
+      `;
+      document.getElementById('final-score').textContent = score;
+      document.getElementById('time-spent-text').textContent = `⏱️ 測驗耗時：${timeSpentFormatted}`;
+
+      const errorContainer = document.getElementById('error-container');
+      const review = renderAnswerReview(userAnswers, activeQuestions);
+      errorContainer.innerHTML = review.html;
+      sendResultToGoogleDrive(review.errorSummaryString);
+      emailResultSnapshot();
+    }
+
+    function loadScreenshotLibrary() {
+      if (typeof window.html2canvas === 'function') return Promise.resolve(window.html2canvas);
+      if (screenshotLibraryPromise) return screenshotLibraryPromise;
+      screenshotLibraryPromise = new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
+        script.async = true;
+        const timeout = setTimeout(() => {
+          script.remove();
+          reject(new Error('截圖元件載入逾時，請檢查網路後重試。'));
+        }, 20000);
+        script.onload = () => {
+          clearTimeout(timeout);
+          if (typeof window.html2canvas === 'function') resolve(window.html2canvas);
+          else reject(new Error('截圖元件未能載入。'));
+        };
+        script.onerror = () => {
+          clearTimeout(timeout);
+          script.remove();
+          reject(new Error('截圖元件載入失敗，請檢查網路後重試。'));
+        };
+        document.head.appendChild(script);
+      }).catch(error => {
+        screenshotLibraryPromise = null;
+        throw error;
+      });
+      return screenshotLibraryPromise;
+    }
+
+    async function captureResultSnapshot() {
+      const html2canvas = await loadScreenshotLibrary();
+      if (document.fonts && document.fonts.ready) await document.fonts.ready;
+      const snapshot = document.getElementById('result-card').cloneNode(true);
+      snapshot.id = 'result-snapshot';
+      snapshot.classList.remove('hidden');
+      snapshot.style.cssText = 'position:absolute;left:-10000px;top:0;width:1100px;max-width:none;box-sizing:border-box;box-shadow:none;background:#fff;';
+      snapshot.querySelectorAll('[data-html2canvas-ignore], #upload-status').forEach(element => element.remove());
+      snapshot.querySelectorAll('.review-scroll').forEach(element => { element.style.overflow = 'visible'; });
+      document.body.appendChild(snapshot);
+      try {
+        const canvas = await html2canvas(snapshot, { backgroundColor: '#ffffff', scale: 1, logging: false, windowWidth: 1200 });
+        const dataUrl = canvas.toDataURL('image/png');
+        if (!dataUrl.startsWith('data:image/png;base64,') || dataUrl.length < 30) throw new Error('未能產生結果截圖。');
+        return dataUrl;
+      } finally {
+        snapshot.remove();
+      }
+    }
+
+    function postSnapshotForEmail(dataUrl) {
+      if (!snapshotRequestId) snapshotRequestId = crypto.randomUUID();
+      const fields = {
+        action: 'emailResultSnapshot', requestId: snapshotRequestId,
+        timestamp: new Date().toLocaleString('zh-TW', { timeZone: 'Asia/Hong_Kong' }),
+        employeeId: userData.empId, team: userData.team,
+        score: String(score), timeSpent: timeSpentFormatted,
+        imageBase64: dataUrl.split(',')[1]
+      };
+      return postCloudForm(fields, 'egate-snapshot-result', '未收到寄信確認（目前無法確認是否已寄出）。請先查看 bpegate@gmail.com 及垃圾郵件；如未收到，請確認 Apps Script 有 doPost、已完成寄信授權，並更新原有部署的新版本。');
+    }
+
+    function postCloudForm(fields, replyType, timeoutMessage) {
+      const requestId = fields.requestId;
+      return new Promise((resolve, reject) => {
+        const iframe = document.createElement('iframe');
+        iframe.name = replyType.replace(/-/g, '_') + '_' + requestId.replace(/-/g, '');
+        iframe.style.display = 'none';
+        iframe.title = fields.action === 'saveQuizResult' ? '測驗結果儲存' : '結果截圖寄送';
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = GOOGLE_SCRIPT_URL;
+        form.target = iframe.name;
+        form.style.display = 'none';
+        Object.entries(fields).forEach(([name, value]) => {
+          const field = document.createElement('input');
+          field.type = 'hidden'; field.name = name; field.value = value;
+          form.appendChild(field);
+        });
+        let timeout;
+        function cleanup() {
+          clearTimeout(timeout);
+          window.removeEventListener('message', receive);
+          form.remove(); iframe.remove();
+        }
+        function receive(event) {
+          // Apps Script 回應在 Google 的沙箱中執行，僅接受 Google 來源及本次請求的確認。
+          let origin;
+          try { origin = new URL(event.origin); } catch (_) { return; }
+          const trusted = origin.protocol === 'https:' && (origin.hostname === 'script.google.com' || origin.hostname.endsWith('.googleusercontent.com'));
+          const reply = event.data;
+          if (!trusted || !reply || reply.type !== replyType || reply.requestId !== requestId) return;
+          cleanup();
+          if (reply.ok === true) resolve(reply);
+          else reject(new Error(reply.message || 'Apps Script 處理失敗。'));
+        }
+        window.addEventListener('message', receive);
+        timeout = setTimeout(() => {
+          cleanup();
+          const error = new Error(timeoutMessage + ' 識別碼：' + requestId);
+          error.confirmationPending = true;
+          reject(error);
+        }, 90000);
+        document.body.appendChild(iframe);
+        document.body.appendChild(form);
+        try { form.submit(); } catch (error) { cleanup(); reject(error); }
+      });
+    }
+
+    async function emailResultSnapshot() {
+      if (snapshotInProgress || snapshotSent) return;
+      snapshotInProgress = true;
+      const status = document.getElementById('snapshot-status');
+      const retry = document.getElementById('snapshot-retry-btn');
+      const restart = document.getElementById('restart-btn');
+      retry.classList.add('hidden');
+      restart.disabled = true;
+      status.style.color = '#555';
+      status.textContent = '正在製作完整結果截圖，請勿關閉頁面…';
+      let stage = '製作截圖';
+      try {
+        if (!snapshotDataUrl) snapshotDataUrl = await captureResultSnapshot();
+        const download = document.getElementById('snapshot-download');
+        download.href = snapshotDataUrl;
+        download.download = 'Egate-Result-' + userData.empId.replace(/[^a-zA-Z0-9_-]/g, '_') + '.png';
+        download.classList.remove('hidden');
+        stage = '寄送截圖';
+        status.textContent = '正在寄送截圖到 bpegate@gmail.com，請勿關閉頁面…';
+        await postSnapshotForEmail(snapshotDataUrl);
+        snapshotSent = true;
+        status.style.color = '#176b3a';
+        status.textContent = '✅ Apps Script 已確認寄出截圖至 bpegate@gmail.com。請在信箱查看附件（亦可檢查垃圾郵件）。';
+      } catch (error) {
+        status.style.color = error.confirmationPending ? '#8a5700' : '#b42318';
+        status.textContent = '⚠️ ' + (error.confirmationPending ? '' : stage + '未完成：') + error.message;
+        retry.classList.remove('hidden');
+      } finally {
+        snapshotInProgress = false;
+        restart.disabled = false;
+      }
+    }
+
+    function sendResultToGoogleDrive(errorDetails) {
+      const uploadStatus = document.getElementById('upload-status');
+      const summary = buildChineseAnswerSummary(userAnswers, activeQuestions);
+      const fields = {
+        action: 'saveQuizResult',
+        requestId: crypto.randomUUID(),
+        timestamp: new Date().toLocaleString("zh-TW", { timeZone: "Asia/Hong_Kong" }),
+        employeeId: userData.empId,
+        team: userData.team,
+        score: score,
+        timeSpent: timeSpentFormatted,
+        errors: errorDetails,
+        correctChinese: summary.correctChinese,
+        selectedChinese: summary.selectedChinese
+      };
+      uploadStatus.style.color = '#555';
+      uploadStatus.textContent = '正在儲存分數、耗時及全部題目的中文答案至 Google Sheets…';
+      // 完整中文答案以 POST 表單傳送，避免 40 題資料造成網址過長。
+      return postCloudForm(fields, 'egate-sheet-result', '未收到 Google Sheets 儲存確認。請確認已安裝支援 saveQuizResult 的 Apps Script 並部署新版本，再檢查試算表。')
+        .then(() => {
+          uploadStatus.style.color = "green";
+          uploadStatus.textContent = '✅ 已確認儲存至 Google Sheets，包含女聲正確中文及答題者選擇的中文。';
+        })
+        .catch(err => {
+          uploadStatus.style.color = err.confirmationPending ? '#8a5700' : '#b42318';
+          uploadStatus.textContent = '⚠️ ' + err.message;
+        });
+    }
+
+    function escapeHtml(text) {
+      return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+
+    if (typeof speechSynthesis !== 'undefined') {
+      document.getElementById('voice-select').addEventListener('change', function() {
+        const voice = this.value === '' ? null : availableEnglishVoices[Number(this.value)];
+        this.dataset.selectedVoice = voice ? voice.voiceURI : '';
+      });
+      speechSynthesis.addEventListener('voiceschanged', populateSpeechVoices);
+      populateSpeechVoices();
+    }
+  </script>
+</body>
+</html>

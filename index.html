@@ -62,7 +62,7 @@
   <!-- 階段 1：員工資料登記 -->
   <div id="login-card" class="card">
     <h2>Egate 40 IR 女聲聽力測驗</h2>
-    <p style="color: #666; font-size: 14px; line-height: 1.7;">共 40 題，限時 20 分鐘。按鈕播放英文合成女聲 → 選擇中文意思 → 輸入聽到的英文。兩部分都答對，每題得 1 分。語音可重播，結果將同步至雲端記錄。</p>
+    <p style="color: #666; font-size: 14px; line-height: 1.7;">共 40 題，限時 30 分鐘。按鈕播放英文合成女聲 → 選擇中文意思 → 輸入聽到的英文。兩部分都答對，每題得 1 分。語音可重播，結果將同步至雲端記錄。</p>
     <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
     
     <div class="form-group">
@@ -94,7 +94,7 @@
   <div id="game-card" class="card hidden">
     <div class="progress">
       <span id="progress-text">進度：1 / 40 題</span>
-      <span id="timer-display" class="timer-badge">⏳ 剩餘時間：20:00</span>
+      <span id="timer-display" class="timer-badge">⏳ 剩餘時間：30:00</span>
     </div>
     
     <div style="font-size: 14px; color: #666; margin-bottom: 10px;" id="current-score-text">當前分數：0 分</div>
@@ -207,7 +207,7 @@
     // 計時相關變數
     let startTime = null;
     let timerInterval = null;
-    const TIME_LIMIT_SECONDS = 20 * 60; // 20 分鐘
+    const TIME_LIMIT_SECONDS = 30 * 60; // 30 分鐘
     let timeSpentFormatted = "";
     let screenshotLibraryPromise = null;
     let snapshotPages = [];
@@ -291,7 +291,7 @@
         if (remainingSeconds <= 0) {
           clearInterval(timerInterval);
           timerDisplay.textContent = "⏳ 時間到！";
-          alert("20分鐘時間已到，測驗將自動提交！");
+          alert("30分鐘時間已到，測驗將自動提交！");
           finishGame();
           return;
         }

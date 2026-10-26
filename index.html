@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Egate 40 IR Listening Quiz</title>
+  <title>Egate 40 IR Listening Quiz — 30分鐘版</title>
   <style>
     body { font-family: "Segoe UI", Arial, sans-serif; background-color: #f0f2f5; padding: 20px; display: flex; justify-content: center; }
     .card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); width: 100%; max-width: 650px; }
@@ -61,7 +61,7 @@
 
   <!-- 階段 1：員工資料登記 -->
   <div id="login-card" class="card">
-    <h2>Egate 40 IR 女聲聽力測驗</h2>
+    <h2>Egate 40 IR 女聲聽力測驗（30分鐘版）</h2>
     <p style="color: #666; font-size: 14px; line-height: 1.7;">共 40 題，限時 30 分鐘。按鈕播放英文合成女聲 → 選擇中文意思 → 輸入聽到的英文。兩部分都答對，每題得 1 分。語音可重播，結果將同步至雲端記錄。</p>
     <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
     
@@ -153,7 +153,7 @@
   </div>
 
  <script>
-    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzcpw_VxvXtMKoxjL0Q5ydlnE_p36T_nQ9QH1Dbm1nFlqSfGFzUqB7VqcB2UZqIkjFF8w/exec";
+    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxH5AYu5x7mvtFq6BYk0OcOIpx5B9MORdgA4Rg-z2KSCf4GWFXyb94Q5LN6AkWHtb5zhw/exec";
 
     const questions = [
       { id: 1, cn: "出發地不是香港", en: "Origin Not HKG" },
@@ -195,7 +195,7 @@
       { id: 37, cn: "無名字", en: "Substitute Given name by NFN" },
       { id: 38, cn: "航班即將起飛 - 30mins 內起飛", en: "Flight Almost Depart" },
       { id: 39, cn: "只接受傳統登機證", en: "Self-Print Or Mobile Boarding Pass" },
-      { id: 40, cn: "使用他人的登機證憑證", en: "Using Another Person's Token" }
+      { id: 40, cn: "使用他人的登機證", en: "Using Another Person's Token" }
     ];
 
     let activeQuestions = [];
@@ -272,6 +272,7 @@
         
         // 記錄開始時間並啟動計時器
         startTime = new Date();
+        document.getElementById('timer-display').textContent = `⏳ 剩餘時間：${Math.floor(TIME_LIMIT_SECONDS / 60)}:00`;
         startTimer();
 
         showQuestion();
